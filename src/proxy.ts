@@ -2,7 +2,8 @@ import { betterFetch } from "@better-fetch/fetch";
 import type { Session } from "better-auth/types";
 import { type NextRequest, NextResponse } from "next/server";
 
-const protectedPaths = ["/dashboard", "/lessons", "/admin"];
+const protectedPaths = ["/dashboard", "/files", "/folders", "/chat"];
+const protectedApiPaths = ["/api/files", "/api/folders", "/api/chat"];
 const authPaths = [
   "/auth/sign-in",
   "/auth/sign-up",
@@ -10,15 +11,19 @@ const authPaths = [
   "/auth/reset-password",
 ];
 
-export default async function authMiddleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (
-    pathname.startsWith("/api/") ||
     pathname.startsWith("/_next/") ||
     pathname.startsWith("/_vercel") ||
-    pathname.startsWith("/favicon.ico")
+    pathname === "/favicon.ico"
   ) {
+    return NextResponse.next();
+  }
+
+  // Better Auth routes are always public
+  if (pathname.startsWith("/api/auth/")) {
     return NextResponse.next();
   }
 
@@ -30,9 +35,13 @@ export default async function authMiddleware(request: NextRequest) {
   });
 
   const isProtected = protectedPaths.some((path) => pathname.startsWith(path));
+  const isProtectedApi = protectedApiPaths.some((path) => pathname.startsWith(path));
   const isAuthPage = authPaths.some((path) => pathname.startsWith(path));
 
   if (!session) {
+    if (isProtectedApi) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
     if (isProtected) {
       const from = encodeURIComponent(pathname);
       return NextResponse.redirect(new URL(`/auth/sign-in?from=${from}`, request.url));
@@ -44,19 +53,9 @@ export default async function authMiddleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/dashboard", request.url));
   }
 
-  const userRole = (session as unknown as { user?: { role?: string } })?.user?.role;
-  if (pathname.startsWith("/admin") && userRole !== "admin") {
-    return NextResponse.redirect(new URL("/dashboard", request.url));
-  }
-
-  const userStatus = (session as unknown as { user?: { status?: string } })?.user?.status;
-  if (isProtected && userStatus !== "active") {
-    return NextResponse.redirect(new URL("/auth/suspended", request.url));
-  }
-
   return NextResponse.next();
 }
 
 export const config = {
-  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };

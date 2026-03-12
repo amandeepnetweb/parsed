@@ -86,9 +86,6 @@ export const fileChunks = pgTable(
     fileId: text("file_id")
       .notNull()
       .references(() => files.id, { onDelete: "cascade" }),
-    userId: text("user_id")
-      .notNull()
-      .references(() => user.id, { onDelete: "cascade" }),
     content: text("content").notNull(),
     chunkIndex: integer("chunk_index").notNull(),
     pineconeId: varchar("pinecone_id", { length: 255 }).notNull(),
@@ -96,10 +93,55 @@ export const fileChunks = pgTable(
   },
   (t) => ({
     fileIdIdx: index("file_chunks_file_id_idx").on(t.fileId),
-    userIdIdx: index("file_chunks_user_id_idx").on(t.userId),
     pineconeIdIdx: index("file_chunks_pinecone_id_idx").on(t.pineconeId),
   }),
 );
 
 export type FileChunk = typeof fileChunks.$inferSelect;
 export type NewFileChunk = typeof fileChunks.$inferInsert;
+
+// ── Chats ─────────────────────────────────────────────────────────────────────
+
+export const chats = pgTable(
+  "chats",
+  {
+    id: text("id").primaryKey().default(sql`gen_random_uuid()`),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    title: text("title").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (t) => ({
+    userIdUpdatedAtIdx: index("chats_user_id_updated_at_idx").on(t.userId, t.updatedAt),
+  }),
+);
+
+export type Chat = typeof chats.$inferSelect;
+export type NewChat = typeof chats.$inferInsert;
+
+// ── Chat Messages ─────────────────────────────────────────────────────────────
+
+export const chatMessages = pgTable(
+  "chat_messages",
+  {
+    id: text("id").primaryKey().default(sql`gen_random_uuid()`),
+    chatId: text("chat_id")
+      .notNull()
+      .references(() => chats.id, { onDelete: "cascade" }),
+    role: text("role").notNull(), // user | assistant
+    content: text("content").notNull(),
+    sources: text("sources"), // JSON string, null for user messages
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (t) => ({
+    chatIdCreatedAtIdx: index("chat_messages_chat_id_created_at_idx").on(t.chatId, t.createdAt),
+  }),
+);
+
+export type ChatMessage = typeof chatMessages.$inferSelect;
+export type NewChatMessage = typeof chatMessages.$inferInsert;

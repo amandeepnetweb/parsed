@@ -13,12 +13,11 @@ export function AuthLayout({ children }: AuthLayoutProps) {
       </div>
       <div className="relative hidden lg:flex flex-col items-center justify-center bg-muted p-12 gap-6">
         <div className="text-center">
-          <p className="text-4xl font-bold tracking-tight">تعلم القرآن الكريم</p>
-          <p className="mt-2 text-muted-foreground text-lg">Learn the Holy Quran</p>
+          <p className="text-4xl font-bold tracking-tight">Parsed</p>
+          <p className="mt-2 text-muted-foreground text-lg">Upload any document. Ask anything.</p>
         </div>
         <p className="text-muted-foreground text-center max-w-sm text-sm">
-          Master Quran recitation with interactive lessons, personalized progress tracking,
-          and bilingual support.
+          Chat with your PDFs, Word docs, and text files. Get instant answers with source citations.
         </p>
         <div className="absolute bottom-4 end-4">
           <ThemeToggle />

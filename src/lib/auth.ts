@@ -2,6 +2,7 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { account, session, user, verification } from "@/db/auth-schema";
 import { db } from "./database";
+import { sendResetPasswordEmail } from "./email";
 
 export const auth = betterAuth({
   database: drizzleAdapter(db, {
@@ -12,9 +13,15 @@ export const auth = betterAuth({
     enabled: true,
     requireEmailVerification: false,
     sendResetPassword: async ({ user, url }) => {
-      console.log(`[Reset Password] ${user.email}: ${url}`);
+      await sendResetPasswordEmail({ to: user.email, url });
     },
     resetPasswordTokenExpiresIn: 60 * 15,
+  },
+  socialProviders: {
+    google: {
+      clientId: process.env.GOOGLE_CLIENT_ID as string,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
+    },
   },
   session: {
     expiresIn: 60 * 60 * 24 * 7,

@@ -35,7 +35,7 @@ Parsed extracts text, embeds it into Pinecone, and uses Claude to answer questio
 | Embeddings | OpenAI `text-embedding-3-small` |
 | LLM | Anthropic Claude 3.5 Sonnet |
 | AI Streaming | Vercel AI SDK |
-| Package Manager | pnpm |
+| Package Manager | npm |
 | Deployment | Vercel |
 
 ---
@@ -122,7 +122,7 @@ Drizzle config: snake_case, schemas from `src/db/schema.ts` + `src/db/auth-schem
 
 ## Pinecone
 
-Index: `parsed` — 1536 dims, cosine metric, namespace per user (`userId`).
+Index: `parsed` — 768 dims, cosine metric, namespace per user (`userId`).
 
 Vector metadata per chunk:
 ```
@@ -184,7 +184,7 @@ POST /api/chat                 → streaming RAG
 ### Drizzle ORM
 - Schema files: `src/db/schemas/*.schema.ts` → re-exported from `src/db/schema.ts`
 - Always export `$inferSelect` and `$inferInsert` types
-- Migration workflow: edit schema → `pnpm db:generate` → `pnpm db:push`
+- Migration workflow: edit schema → `npm run db:generate` → `npm run db:migrate`
 - Casing: snake_case (configured in `drizzle.config.ts`)
 
 ### Better Auth

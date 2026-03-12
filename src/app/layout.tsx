@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "next-themes";
 import { QueryProvider } from "@/providers";
 import { Toaster } from "@/components/ui/sonner";
+import NextTopLoader from "nextjs-toploader";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -16,8 +17,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Quran Learning App",
-  description: "Bilingual Quran learning platform",
+  title: "Parsed — Upload any document. Ask anything.",
+  description: "AI-powered document chat. Upload PDF, DOCX, TXT, or Markdown files and ask questions about them with source citations.",
 };
 
 export default function RootLayout({
@@ -28,7 +29,8 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <ThemeProvider attribute="class" defaultTheme="dark" disableTransitionOnChange>
+        <ThemeProvider attribute="class" defaultTheme="light" disableTransitionOnChange>
+          <NextTopLoader showSpinner={false} />
           <QueryProvider>
             {children}
             <Toaster position="bottom-right" richColors />
