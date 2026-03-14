@@ -56,7 +56,7 @@ export async function POST(req: Request) {
         const [newChat] = await db
           .insert(chats)
           .values({ userId: session.user.id, title: query.slice(0, 100) })
-          .returning({ id: chats.id });
+          .returning();
         id = newChat.id;
       }
       await db.insert(chatMessages).values({

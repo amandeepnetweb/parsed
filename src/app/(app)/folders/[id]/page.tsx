@@ -7,7 +7,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/database";
 import { folders } from "@/db/schema";
 import { Button } from "@/components/ui/button";
-import { FolderCard, NewSubfolderButton, DeleteFolderButton } from "@/components/folders";
+import { FolderCard, NewSubfolderButton, DeleteFolderButton, EmbedButton } from "@/components/folders";
 import { FileList, FileUploader } from "@/components/files";
 import type { Folder } from "@/db/schema";
 
@@ -78,6 +78,7 @@ export default async function FolderPage({ params }: Props) {
         <div className="flex items-center gap-2">
           <DeleteFolderButton folderId={id} folderName={current.name} />
           <NewSubfolderButton parentId={id} />
+          <EmbedButton folderId={id} folderName={current.name} />
           <Button asChild variant="outline" size="sm">
             <Link href={`/chat?folderId=${id}`}>
               <MessageSquare className="mr-2 size-4" />

@@ -25,6 +25,7 @@ export const folders = pgTable(
       { onDelete: "cascade" },
     ),
     name: varchar("name", { length: 255 }).notNull(),
+    widgetToken: text("widget_token").unique(),
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()
