@@ -72,12 +72,12 @@ function NewFolderDialog({
 
 export default function DashboardPage() {
   const { data: flatFolders = [], isLoading: foldersLoading } = useFolders();
-  const { data: allFiles = [], isLoading: filesLoading } = useFiles();
+  const { data: allFiles = [], isLoading: filesLoading } = useFiles("root");
   const rootFolders = buildFolderTree(flatFolders).filter((f) => !f.parentId);
   const [folderDialogOpen, setFolderDialogOpen] = useState(false);
 
   const isLoading = foldersLoading || filesLoading;
-  const isNewUser = !isLoading && allFiles.length === 0 && flatFolders.length === 0;
+  const isNewUser = !isLoading && allFiles.length === 0 && rootFolders.length === 0;
 
   if (isNewUser) {
     return (
@@ -150,12 +150,12 @@ export default function DashboardPage() {
         <FileUploader />
       </section>
 
-      {/* All files */}
+      {/* Root files */}
       <section className="space-y-3">
         <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          All Files
+          Files
         </h2>
-        <FileList />
+        <FileList folderId="root" />
       </section>
 
       <NewFolderDialog open={folderDialogOpen} onOpenChange={setFolderDialogOpen} />

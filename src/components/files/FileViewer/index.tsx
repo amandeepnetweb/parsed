@@ -1,12 +1,15 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Check, Copy, Download } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Check, Copy } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { PDFViewer } from "@/components/files/PDFViewer";
+
+const PDFViewer = dynamic(() => import("@/components/files/PDFViewer").then((m) => m.PDFViewer), { ssr: false });
+const DocxViewer = dynamic(() => import("@/components/files/DocxViewer").then((m) => m.DocxViewer), { ssr: false });
+const TxtViewer = dynamic(() => import("@/components/files/TxtViewer").then((m) => m.TxtViewer), { ssr: false });
 
 interface Props {
   blobUrl: string;
@@ -34,12 +37,12 @@ function CopyButton({ code }: { code: string }) {
   );
 }
 
-export function FileViewer({ blobUrl, fileType, fileName }: Props) {
+export function FileViewer({ blobUrl, fileType }: Props) {
   const [textContent, setTextContent] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (fileType === "txt" || fileType === "md") {
+    if (fileType === "md" || fileType === "web") {
       setLoading(true);
       fetch(blobUrl)
         .then((r) => r.text())
@@ -48,25 +51,9 @@ export function FileViewer({ blobUrl, fileType, fileName }: Props) {
     }
   }, [blobUrl, fileType]);
 
-  if (fileType === "pdf") {
-    return <PDFViewer url={blobUrl} />;
-  }
-
-  if (fileType === "docx") {
-    return (
-      <div className="flex h-full flex-col items-center justify-center gap-4 p-8 text-center">
-        <p className="text-sm text-muted-foreground">
-          Word documents cannot be previewed directly.
-        </p>
-        <Button asChild variant="outline">
-          <a href={blobUrl} download={fileName}>
-            <Download className="mr-2 size-4" />
-            Download {fileName}
-          </a>
-        </Button>
-      </div>
-    );
-  }
+  if (fileType === "pdf") return <PDFViewer url={blobUrl} />;
+  if (fileType === "docx") return <DocxViewer url={blobUrl} />;
+  if (fileType === "txt") return <TxtViewer url={blobUrl} />;
 
   if (loading) {
     return (
@@ -78,15 +65,17 @@ export function FileViewer({ blobUrl, fileType, fileName }: Props) {
     );
   }
 
-  if (fileType === "md" && textContent) {
+  if ((fileType === "md" || fileType === "web") && textContent) {
     return (
       <div className="h-full overflow-y-auto">
-        <div className="prose prose-sm dark:prose-invert max-w-none px-8 py-5
+        <div
+          className="prose prose-sm dark:prose-invert max-w-none px-8 py-5
           prose-p:my-1.5 prose-headings:mb-2 prose-headings:mt-5 prose-h1:mt-0
           prose-li:my-0.5 prose-ul:my-2 prose-ol:my-2 prose-hr:my-4
           prose-pre:!bg-gray-100 dark:prose-pre:!bg-gray-800 prose-pre:my-3
           prose-pre:!text-gray-800 dark:prose-pre:!text-gray-100
-          prose-code:before:content-none prose-code:after:content-none">
+          prose-code:before:content-none prose-code:after:content-none"
+        >
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
             components={{
@@ -115,11 +104,5 @@ export function FileViewer({ blobUrl, fileType, fileName }: Props) {
     );
   }
 
-  return (
-    <div className="h-full overflow-y-auto p-6">
-      <pre className="whitespace-pre-wrap break-words font-mono text-sm">
-        {textContent ?? ""}
-      </pre>
-    </div>
-  );
+  return null;
 }

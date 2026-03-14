@@ -79,7 +79,7 @@ export default async function FilePage({ params }: Props) {
             </span>
           )}
         </div>
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 min-w-0 overflow-hidden">
           <FileViewer
             blobUrl={file.blobUrl}
             fileType={file.type}

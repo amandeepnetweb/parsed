@@ -145,3 +145,35 @@ export const chatMessages = pgTable(
 
 export type ChatMessage = typeof chatMessages.$inferSelect;
 export type NewChatMessage = typeof chatMessages.$inferInsert;
+
+// ── Web Crawl Jobs ────────────────────────────────────────────────────────────
+
+export const webCrawlJobs = pgTable(
+  "web_crawl_jobs",
+  {
+    id: text("id").primaryKey().default(sql`gen_random_uuid()`),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    folderId: text("folder_id").references(() => folders.id, {
+      onDelete: "set null",
+    }),
+    rootUrl: text("root_url").notNull(),
+    status: text("status").default("pending").notNull(), // pending | crawling | processing | done | error
+    totalPages: integer("total_pages").default(0).notNull(),
+    processedPages: integer("processed_pages").default(0).notNull(),
+    fileId: text("file_id").references(() => files.id, { onDelete: "set null" }),
+    errorMessage: text("error_message"),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (t) => ({
+    userIdIdx: index("web_crawl_jobs_user_id_idx").on(t.userId),
+  }),
+);
+
+export type WebCrawlJob = typeof webCrawlJobs.$inferSelect;
+export type NewWebCrawlJob = typeof webCrawlJobs.$inferInsert;

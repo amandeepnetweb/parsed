@@ -75,20 +75,20 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 }
 
 export async function DELETE(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const session = await auth.api.getSession({ headers: await headers() });
+  if (!session) return Response.json({ error: "Unauthorized" }, { status: 401 });
+
+  const existing = await db
+    .select({ id: files.id, blobUrl: files.blobUrl })
+    .from(files)
+    .where(and(eq(files.id, id), eq(files.userId, session.user.id)))
+    .limit(1);
+
+  if (!existing.length) return Response.json({ error: "File not found" }, { status: 404 });
+
+  // Delete Pinecone vectors — batched, non-fatal if Pinecone is unavailable
   try {
-    const { id } = await params;
-    const session = await auth.api.getSession({ headers: await headers() });
-    if (!session) return Response.json({ error: "Unauthorized" }, { status: 401 });
-
-    const existing = await db
-      .select({ id: files.id, blobUrl: files.blobUrl })
-      .from(files)
-      .where(and(eq(files.id, id), eq(files.userId, session.user.id)))
-      .limit(1);
-
-    if (!existing.length) return Response.json({ error: "File not found" }, { status: 404 });
-
-    // Delete Pinecone vectors
     const chunks = await db
       .select({ pineconeId: fileChunks.pineconeId })
       .from(fileChunks)
@@ -99,15 +99,19 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
         chunks.map((c) => c.pineconeId),
       );
     }
-
-    // Delete from Vercel Blob
-    await deleteFromBlob(existing[0].blobUrl);
-
-    // Delete from DB (cascade removes file_chunks)
-    await db.delete(files).where(and(eq(files.id, id), eq(files.userId, session.user.id)));
-
-    return new Response(null, { status: 204 });
-  } catch {
-    return Response.json({ error: "Internal server error" }, { status: 500 });
+  } catch (err) {
+    console.error("[delete-file] Pinecone delete failed (continuing):", err);
   }
+
+  // Delete from Vercel Blob — non-fatal if already gone
+  try {
+    await deleteFromBlob(existing[0].blobUrl);
+  } catch (err) {
+    console.error("[delete-file] Blob delete failed (continuing):", err);
+  }
+
+  // Delete from DB (cascade removes file_chunks)
+  await db.delete(files).where(and(eq(files.id, id), eq(files.userId, session.user.id)));
+
+  return new Response(null, { status: 204 });
 }

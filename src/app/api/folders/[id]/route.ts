@@ -2,7 +2,9 @@ import { and, eq, inArray } from "drizzle-orm";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/database";
-import { files, folders } from "@/db/schema";
+import { files, folders, fileChunks } from "@/db/schema";
+import { deleteFromBlob } from "@/lib/storage";
+import { deleteChunksByIds } from "@/lib/pinecone";
 import type { Folder } from "@/db/schema";
 
 function getDescendantIds(allFolders: Folder[], rootId: string): string[] {
@@ -66,19 +68,40 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
     if (!existing.length) return Response.json({ error: "Folder not found" }, { status: 404 });
 
     if (strategy === "delete-all") {
-      // Find all descendant folder IDs
-      const allUserFolders = await db
-        .select()
-        .from(folders)
-        .where(eq(folders.userId, userId));
-
+      const allUserFolders = await db.select().from(folders).where(eq(folders.userId, userId));
       const folderIds = getDescendantIds(allUserFolders, id);
 
-      // Delete files in all those folders (Blob/Pinecone cleanup handled in Phase 7)
       if (folderIds.length > 0) {
-        await db
-          .delete(files)
+        // Fetch all files in the folder tree
+        const folderFiles = await db
+          .select({ id: files.id, blobUrl: files.blobUrl })
+          .from(files)
           .where(and(inArray(files.folderId, folderIds), eq(files.userId, userId)));
+
+        if (folderFiles.length > 0) {
+          const fileIds = folderFiles.map((f) => f.id);
+
+          // Clean up Pinecone vectors — non-fatal
+          try {
+            const chunks = await db
+              .select({ pineconeId: fileChunks.pineconeId })
+              .from(fileChunks)
+              .where(inArray(fileChunks.fileId, fileIds));
+            if (chunks.length > 0) {
+              await deleteChunksByIds(userId, chunks.map((c) => c.pineconeId));
+            }
+          } catch (err) {
+            console.error("[delete-folder] Pinecone cleanup failed (continuing):", err);
+          }
+
+          // Clean up Vercel Blob — non-fatal
+          await Promise.allSettled(folderFiles.map((f) => deleteFromBlob(f.blobUrl)));
+
+          // Delete files from DB
+          await db
+            .delete(files)
+            .where(and(inArray(files.folderId, folderIds), eq(files.userId, userId)));
+        }
       }
     }
 

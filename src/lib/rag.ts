@@ -1,8 +1,5 @@
-import { inArray } from "drizzle-orm";
 import { embedText } from "./embeddings";
 import { queryIndex } from "./pinecone";
-import { db } from "./database";
-import { fileChunks } from "@/db/schema";
 import type { Source } from "@/types/chat.types";
 
 const SCORE_THRESHOLD = 0.3;
@@ -17,7 +14,7 @@ export async function retrieveContext(
   userId: string,
   options: { fileIds?: string[]; topK?: number } = {},
 ): Promise<RagResult> {
-  const { fileIds, topK = 6 } = options;
+  const { fileIds, topK = 4 } = options;
 
   const vector = await embedText(query);
 
@@ -39,15 +36,6 @@ export async function retrieveContext(
     };
   }
 
-  // Fetch full chunk content from DB using pineconeIds
-  const pineconeIds = relevant.map((m) => m.id);
-  const rows = await db
-    .select({ pineconeId: fileChunks.pineconeId, content: fileChunks.content })
-    .from(fileChunks)
-    .where(inArray(fileChunks.pineconeId, pineconeIds));
-
-  const contentMap = new Map(rows.map((r) => [r.pineconeId, r.content]));
-
   // Build sources — deduplicated by fileId (highest score per file)
   const sourceMap = new Map<string, Source>();
   for (const m of relevant) {
@@ -68,10 +56,11 @@ export async function retrieveContext(
     }
   }
 
-  // Build context with full chunk content
+  // Build context using content stored in Pinecone metadata
+  // Falls back to preview for vectors upserted before this change
   const context = relevant
     .map((m, i) => {
-      const content = contentMap.get(m.id) ?? (m.metadata?.preview as string);
+      const content = (m.metadata?.content ?? m.metadata?.preview) as string;
       return `[${i + 1}] File: ${m.metadata?.fileName}\n${content}`;
     })
     .join("\n\n---\n\n");

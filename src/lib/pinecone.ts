@@ -18,6 +18,7 @@ export interface ChunkMetadata {
   tags: string[];
   size: number;
   preview: string;
+  content: string;
   [key: string]: string | number | boolean | string[];
 }
 
@@ -54,6 +55,8 @@ export async function deleteChunksByIds(
 ): Promise<void> {
   if (pineconeIds.length === 0) return;
   const index = getPineconeIndex(userId);
-  // deleteMany accepts an array of ids
-  await index.deleteMany(pineconeIds);
+  const BATCH = 100;
+  for (let i = 0; i < pineconeIds.length; i += BATCH) {
+    await index.deleteMany(pineconeIds.slice(i, i + BATCH));
+  }
 }

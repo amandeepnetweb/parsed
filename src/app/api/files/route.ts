@@ -1,5 +1,5 @@
 import path from "path";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, isNull } from "drizzle-orm";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/database";
@@ -31,9 +31,12 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const folderId = searchParams.get("folderId");
 
-    const conditions = folderId
-      ? and(eq(files.userId, session.user.id), eq(files.folderId, folderId))
-      : eq(files.userId, session.user.id);
+    const conditions =
+      folderId === "root"
+        ? and(eq(files.userId, session.user.id), isNull(files.folderId))
+        : folderId
+          ? and(eq(files.userId, session.user.id), eq(files.folderId, folderId))
+          : eq(files.userId, session.user.id);
 
     const rows = await db
       .select({

@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { FileWithFolder } from "@/types";
 
-export function useFiles(folderId?: string) {
+export function useFiles(folderId?: string | "root") {
   const params = folderId ? `?folderId=${folderId}` : "";
   return useQuery<FileWithFolder[]>({
     queryKey: ["files", folderId ?? "all"],

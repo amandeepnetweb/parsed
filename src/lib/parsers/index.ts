@@ -13,6 +13,7 @@ export async function parseFile(
       return parseDocx(buffer);
     case "txt":
     case "md":
+    case "web":
       return parseText(buffer);
     default:
       throw new Error(`Unsupported file type: ${fileType}`);

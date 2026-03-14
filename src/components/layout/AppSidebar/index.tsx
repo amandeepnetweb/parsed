@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Files, LayoutDashboard, LogOut, MessageSquare } from "lucide-react";
+import { Files, Globe, LayoutDashboard, LogOut, MessageSquare } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -25,6 +25,7 @@ const navItems = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
   { label: "All Files", href: "/files", icon: Files },
   { label: "Chat", href: "/chat", icon: MessageSquare },
+  { label: "Import", href: "/import", icon: Globe },
 ];
 
 function getInitials(name: string) {
@@ -121,7 +122,7 @@ export function AppSidebar({ user }: AppSidebarProps) {
                 <span className="text-muted-foreground truncate text-xs">{user.email}</span>
               </div>
             </SidebarMenuButton>
-            <SidebarMenuAction onClick={handleSignOut} showOnHover title="Sign out">
+            <SidebarMenuAction onClick={handleSignOut} showOnHover title="Sign out" className="cursor-pointer">
               <LogOut />
               <span className="sr-only">Sign out</span>
             </SidebarMenuAction>

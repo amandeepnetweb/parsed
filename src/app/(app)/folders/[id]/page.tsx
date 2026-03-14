@@ -7,7 +7,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/database";
 import { folders } from "@/db/schema";
 import { Button } from "@/components/ui/button";
-import { FolderCard } from "@/components/folders";
+import { FolderCard, NewSubfolderButton, DeleteFolderButton } from "@/components/folders";
 import { FileList, FileUploader } from "@/components/files";
 import type { Folder } from "@/db/schema";
 
@@ -75,13 +75,25 @@ export default async function FolderPage({ params }: Props) {
       {/* Heading */}
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-2xl font-bold">{current.name}</h1>
-        <Button asChild variant="outline" size="sm">
-          <Link href={`/chat?folderId=${id}`}>
-            <MessageSquare className="mr-2 size-4" />
-            Ask about this folder
-          </Link>
-        </Button>
+        <div className="flex items-center gap-2">
+          <DeleteFolderButton folderId={id} folderName={current.name} />
+          <NewSubfolderButton parentId={id} />
+          <Button asChild variant="outline" size="sm">
+            <Link href={`/chat?folderId=${id}`}>
+              <MessageSquare className="mr-2 size-4" />
+              Ask about this folder
+            </Link>
+          </Button>
+        </div>
       </div>
+
+      {/* Upload */}
+      <section className="space-y-3">
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Upload
+        </h2>
+        <FileUploader defaultFolderId={id} />
+      </section>
 
       {/* Subfolders */}
       {subfolders.length > 0 && (
@@ -96,14 +108,6 @@ export default async function FolderPage({ params }: Props) {
           </div>
         </section>
       )}
-
-      {/* Upload */}
-      <section className="space-y-3">
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Upload
-        </h2>
-        <FileUploader defaultFolderId={id} />
-      </section>
 
       {/* Files */}
       <section className="space-y-3">

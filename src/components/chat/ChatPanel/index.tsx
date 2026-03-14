@@ -50,7 +50,7 @@ function ThinkingTypewriter() {
   return (
     <div className="flex justify-start px-1 py-1">
       <span className="text-sm text-muted-foreground">{displayed}</span>
-      <span className="ml-0.5 inline-block w-px h-3.5 bg-muted-foreground/60 animate-pulse align-middle" />
+      <span className="ml-0.5 inline-block w-px h-[1em] bg-muted-foreground/60 animate-pulse align-text-bottom" />
     </div>
   );
 }
@@ -171,6 +171,11 @@ export function ChatPanel({ fileIds, placeholder, chatId: chatIdProp, initialMes
       messages.length > 0 &&
       !getMessageText(messages[messages.length - 1].parts));
 
+  const THINKING_ID = "__thinking__";
+  const listItems = showThinking
+    ? [...allMessages, { id: THINKING_ID, role: "thinking" as const, parts: [] } as unknown as UIMessage]
+    : allMessages;
+
   return (
     <div className="flex h-full flex-col">
       <div className="flex-1 min-h-0">
@@ -184,8 +189,8 @@ export function ChatPanel({ fileIds, placeholder, chatId: chatIdProp, initialMes
           <Virtuoso
             style={{ height: "100%" }}
             firstItemIndex={firstItemIndex}
-            initialTopMostItemIndex={allMessages.length - 1}
-            data={allMessages}
+            initialTopMostItemIndex={listItems.length - 1}
+            data={listItems}
             startReached={loadOlderMessages}
             followOutput="smooth"
             components={{
@@ -197,6 +202,13 @@ export function ChatPanel({ fileIds, placeholder, chatId: chatIdProp, initialMes
                 ) : null,
             }}
             itemContent={(_, message) => {
+              if (message.id === THINKING_ID) {
+                return (
+                  <div className="px-4 py-2 max-w-4xl mx-auto w-full">
+                    <ThinkingTypewriter />
+                  </div>
+                );
+              }
               const text = getMessageText(message.parts);
               const sources = message.role === "assistant" ? getMessageSources(message.parts) : [];
               return (
@@ -223,12 +235,6 @@ export function ChatPanel({ fileIds, placeholder, chatId: chatIdProp, initialMes
           />
         )}
       </div>
-
-      {showThinking && (
-        <div className="max-w-4xl mx-auto w-full px-5 py-1">
-          <ThinkingTypewriter />
-        </div>
-      )}
 
       {status === "error" && error && (
         <div className="max-w-4xl mx-auto w-full px-4 mb-2">
