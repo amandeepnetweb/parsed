@@ -1,17 +1,14 @@
-"use client";
-
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { TypingIndicator } from "./TypingIndicator";
 import { cn } from "@/lib/utils";
+import type { Message as MessageType } from "@/types";
 
 interface Props {
-  role: "user" | "assistant";
-  content: string;
+  message: MessageType;
+  primaryColor: string;
 }
 
-// Remark doesn't recognize indented ``` fences (common inside list items from AI output).
-// Strip leading whitespace from fence markers so they're always document-level.
-// Also close any unclosed fence (happens mid-stream).
 function fixMarkdown(content: string): string {
   let fixed = content.replace(/^[ \t]+(```)/gm, "$1");
   const fences = fixed.match(/^```/gm) ?? [];
@@ -19,36 +16,40 @@ function fixMarkdown(content: string): string {
   return fixed;
 }
 
-export function ChatMessage({ role, content }: Props) {
-  if (role === "assistant" && !content) return null;
+export function Message({ message, primaryColor }: Props) {
+  const isUser = message.role === "user";
+
   return (
-    <div className={cn("flex w-full", role === "user" ? "justify-end" : "justify-start")}>
+    <div className={cn("flex flex-col gap-1", isUser ? "items-end" : "items-start")}>
       <div
         className={cn(
-          "max-w-[85%] min-w-0 rounded-2xl px-4 py-3 text-sm leading-relaxed break-words overflow-hidden",
-          role === "user"
-            ? "bg-primary text-primary-foreground rounded-br-sm"
-            : "bg-muted text-foreground rounded-bl-sm",
+          "max-w-[80%] rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed",
+          isUser
+            ? "rounded-br-sm text-white"
+            : "rounded-bl-sm bg-zinc-100 text-zinc-800",
         )}
+        style={isUser ? { backgroundColor: primaryColor } : undefined}
       >
-        {role === "user" ? (
-          <p className="whitespace-pre-wrap">{content}</p>
+        {message.isStreaming && !message.content ? (
+          <TypingIndicator />
+        ) : isUser ? (
+          <span className="whitespace-pre-wrap break-words">{message.content}</span>
         ) : (
           <ReactMarkdown
             remarkPlugins={[remarkGfm]}
-            children={fixMarkdown(content)}
+            children={fixMarkdown(message.content)}
             components={{
               p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
               ul: ({ children }) => <ul className="mb-2 list-disc pl-4 space-y-1">{children}</ul>,
               ol: ({ children }) => <ol className="mb-2 list-decimal pl-4 space-y-1">{children}</ol>,
               li: ({ children }) => <li className="leading-relaxed">{children}</li>,
               pre: ({ children }) => (
-                <pre className="rounded-md bg-background/60 px-3 py-2 font-mono text-xs my-2 overflow-x-auto whitespace-pre">
+                <pre className="rounded-md bg-white/60 px-3 py-2 font-mono text-xs my-2 overflow-x-auto whitespace-pre">
                   {children}
                 </pre>
               ),
               code: ({ children, className }) => (
-                <code className={cn("font-mono text-xs", !className && "rounded bg-background/60 px-1 py-0.5")}>
+                <code className={cn("font-mono text-xs", !className && "rounded bg-white/60 px-1 py-0.5")}>
                   {children}
                 </code>
               ),
@@ -62,16 +63,16 @@ export function ChatMessage({ role, content }: Props) {
               h5: ({ children }) => <h5 className="text-xs font-semibold mb-1 mt-2 first:mt-0">{children}</h5>,
               h6: ({ children }) => <h6 className="text-xs font-medium mb-1 mt-2 first:mt-0">{children}</h6>,
               a: ({ href, children }) => (
-                <a href={href} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:opacity-80 break-all">
+                <a href={href} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 hover:opacity-80">
                   {children}
                 </a>
               ),
               blockquote: ({ children }) => (
-                <blockquote className="border-l-2 border-muted-foreground/40 pl-3 my-2 text-muted-foreground italic">
+                <blockquote className="border-l-2 border-zinc-400/40 pl-3 my-2 text-zinc-500 italic">
                   {children}
                 </blockquote>
               ),
-              hr: () => <hr className="my-3 border-muted-foreground/20" />,
+              hr: () => <hr className="my-3 border-zinc-400/20" />,
               table: ({ children }) => (
                 <div className="my-2 overflow-x-auto">
                   <table className="w-full text-xs border-collapse">{children}</table>
@@ -79,8 +80,8 @@ export function ChatMessage({ role, content }: Props) {
               ),
               thead: ({ children }) => <thead>{children}</thead>,
               tbody: ({ children }) => <tbody>{children}</tbody>,
-              tr: ({ children }) => <tr className="border-b border-muted-foreground/20">{children}</tr>,
-              th: ({ children }) => <th className="px-3 py-1.5 text-left font-semibold bg-background/40">{children}</th>,
+              tr: ({ children }) => <tr className="border-b border-zinc-400/20">{children}</tr>,
+              th: ({ children }) => <th className="px-3 py-1.5 text-left font-semibold bg-white/40">{children}</th>,
               td: ({ children }) => <td className="px-3 py-1.5">{children}</td>,
             }}
           />

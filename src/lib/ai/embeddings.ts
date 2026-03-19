@@ -1,4 +1,6 @@
 import OpenAI from "openai";
+import { embedMany } from "ai";
+import { google } from "@ai-sdk/google";
 import {
   EMBEDDING_CONFIG,
   DEFAULT_EMBEDDING_MODELS,
@@ -7,43 +9,39 @@ import {
 
 const BATCH_SIZE = 100;
 
-function buildEmbeddingClient(): { client: OpenAI; model: string } {
+export async function embedTexts(texts: string[]): Promise<number[][]> {
   const { provider, model } = EMBEDDING_CONFIG;
   const resolvedModel = model ?? DEFAULT_EMBEDDING_MODELS[provider];
 
-  switch (provider) {
-    case "ollama":
-      return {
-        client: new OpenAI({
-          baseURL: `${OLLAMA_BASE_URL}/v1`,
-          apiKey: "ollama",
-        }),
-        model: resolvedModel,
-      };
-
-    case "openai":
-    default:
-      return {
-        client: new OpenAI({ apiKey: process.env.OPENAI_API_KEY }),
-        model: resolvedModel,
-      };
+  if (provider === "google") {
+    const embeddings: number[][] = [];
+    for (let i = 0; i < texts.length; i += BATCH_SIZE) {
+      const batch = texts.slice(i, i + BATCH_SIZE);
+      const { embeddings: batchEmbeddings } = await embedMany({
+        model: google.embedding(resolvedModel),
+        values: batch,
+        providerOptions: { google: { outputDimensionality: 768 } },
+      });
+      embeddings.push(...batchEmbeddings);
+    }
+    return embeddings;
   }
-}
 
-const { client, model: EMBEDDING_MODEL } = buildEmbeddingClient();
+  // openai + ollama — both speak the OpenAI embeddings API
+  const client =
+    provider === "ollama"
+      ? new OpenAI({ baseURL: `${OLLAMA_BASE_URL}/v1`, apiKey: "ollama" })
+      : new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-export async function embedTexts(texts: string[]): Promise<number[][]> {
   const embeddings: number[][] = [];
-
   for (let i = 0; i < texts.length; i += BATCH_SIZE) {
     const batch = texts.slice(i, i + BATCH_SIZE);
     const response = await client.embeddings.create({
-      model: EMBEDDING_MODEL,
+      model: resolvedModel,
       input: batch,
     });
     embeddings.push(...response.data.map((d) => d.embedding));
   }
-
   return embeddings;
 }
 

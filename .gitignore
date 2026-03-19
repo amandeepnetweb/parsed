@@ -1,7 +1,12 @@
 # Dependencies
 node_modules/
+widget/node_modules/
 .pnp
 .pnp.js
+
+# Widget build artifact (generated during Vercel build)
+public/widget.js
+widget/dist/
 
 # Build
 .next/

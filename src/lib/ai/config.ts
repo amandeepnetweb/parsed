@@ -1,5 +1,5 @@
 export type LLMProvider = "anthropic" | "openai" | "google" | "ollama";
-export type EmbeddingProvider = "openai" | "ollama";
+export type EmbeddingProvider = "openai" | "google" | "ollama";
 
 export const OLLAMA_BASE_URL =
   process.env.OLLAMA_BASE_URL ?? "http://localhost:11434";
@@ -23,5 +23,6 @@ export const DEFAULT_LLM_MODELS: Record<LLMProvider, string> = {
 
 export const DEFAULT_EMBEDDING_MODELS: Record<EmbeddingProvider, string> = {
   openai: "text-embedding-3-small",
+  google: "gemini-embedding-001",
   ollama: "nomic-embed-text",
 };

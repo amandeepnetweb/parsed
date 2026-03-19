@@ -89,7 +89,7 @@ export default async function FilePage({ params }: Props) {
       </div>
 
       {/* Chat panel */}
-      <div className="flex min-h-0 flex-[2] flex-col md:w-[380px] md:flex-none">
+      <div className="flex min-h-0 flex-[2] flex-col overflow-hidden md:w-[380px] md:flex-none">
         <div className="border-b px-4 py-2">
           <p className="text-sm font-medium">Chat</p>
         </div>

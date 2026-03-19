@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Widget Embed Test</title>
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      max-width: 800px;
+      margin: 80px auto;
+      padding: 0 24px;
+      color: #333;
+    }
+
+    h1 {
+      font-size: 1.75rem;
+      margin-bottom: 0.5rem;
+    }
+
+    p {
+      color: #666;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Test Page</h1>
+  <p>This page simulates an external website with the Parsed chat widget embedded.</p>
+  <p>
+    Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut
+    labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco
+    laboris nisi ut aliquip ex ea commodo consequat.
+  </p>
+  <p>
+    Replace the <code>apiUrl</code>, <code>folderId</code>, and <code>token</code> below with
+    your real values from the Parsed app.
+  </p>
+  <!doctype html>
+  <html lang="en">
+
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Widget Embed Test</title>
+    <style>
+      body {
+        font-family: system-ui, sans-serif;
+        max-width: 800px;
+        margin: 80px auto;
+        padding: 0 24px;
+        color: #333;
+      }
+
+      h1 {
+        font-size: 1.75rem;
+        margin-bottom: 0.5rem;
+      }
+
+      p {
+        color: #666;
+        line-height: 1.6;
+      }
+    </style>
+  </head>
+
+  <body>
+    <h1>Test Page</h1>
+    <p>This page simulates an external website with the Parsed chat widget embedded.</p>
+    <p>
+      Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut
+      labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco
+      laboris nisi ut aliquip ex ea commodo consequat.
+    </p>
+    <p>
+      Replace the <code>apiUrl</code>, <code>folderId</code>, and <code>token</code> below with
+      your real values from the Parsed app.
+    </p>
+
+    <script>
+      (function () {
+        window.ParsedWidgetConfig = {
+          apiUrl: "http://localhost:3000",
+          folderId: "9cc318b5-67b1-4553-8ccf-53105afd63c9",
+          token: "35e9b054-218b-4a2b-846c-97a579d5a182",
+          title: "Ask about AI research"
+        };
+        var s = document.createElement('script');
+        s.src = "http://localhost:3000/widget.js";
+        s.async = true;
+        document.head.appendChild(s);
+      })();
+    </script>
+  </body>
+
+  </html>
+
+  <!-- <script>
+    (function () {
+      window.ParsedWidgetConfig = {
+        apiUrl: "http://localhost:3000",
+        folderId: "9cc318b5-67b1-4553-8ccf-53105afd63c9",
+        token: "13a749e6-47e5-4d4c-ae38-ede5e5e26066",
+        title: "Ask about AI research",
+        welcomeMessage: "Hi! Ask me anything about our documents.",
+        primaryColor: "#18181b",
+        position: "bottom-right",
+      };
+      var s = document.createElement("script");
+      s.src = "../dist/parsed-widget.js"; // after build; or use your hosted URL
+      s.async = true;
+      document.head.appendChild(s);
+    })();
+  </script> -->
+</body>
+
+</html>

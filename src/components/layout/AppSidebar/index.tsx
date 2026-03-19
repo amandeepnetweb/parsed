@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Files, Globe, LayoutDashboard, LogOut, MessageSquare } from "lucide-react";
+import { Globe, LayoutDashboard, LogOut, MessageSquare } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -23,7 +23,6 @@ import { FolderTree } from "@/components/layout/FolderTree";
 
 const navItems = [
   { label: "Dashboard", href: "/dashboard", icon: LayoutDashboard },
-  { label: "All Files", href: "/files", icon: Files },
   { label: "Chat", href: "/chat", icon: MessageSquare },
   { label: "Import", href: "/import", icon: Globe },
 ];

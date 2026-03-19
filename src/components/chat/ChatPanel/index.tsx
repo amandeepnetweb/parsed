@@ -178,7 +178,7 @@ export function ChatPanel({ fileIds, placeholder, chatId: chatIdProp, initialMes
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex-1 min-h-0">
+      <div className="flex-1 min-h-0 overflow-hidden">
         {showPlaceholder ? (
           <div className="flex h-full items-center justify-center">
             <p className="text-center text-sm text-muted-foreground">
@@ -212,7 +212,7 @@ export function ChatPanel({ fileIds, placeholder, chatId: chatIdProp, initialMes
               const text = getMessageText(message.parts);
               const sources = message.role === "assistant" ? getMessageSources(message.parts) : [];
               return (
-                <div className="space-y-1 px-4 py-2 max-w-4xl mx-auto w-full">
+                <div className="space-y-1 px-4 py-2 max-w-4xl mx-auto w-full min-w-0 overflow-hidden">
                   <ChatMessage role={message.role as "user" | "assistant"} content={text} />
                   {!hideSources && sources.length > 0 && (
                     <p className="text-xs text-muted-foreground pl-1 pt-0.5">
