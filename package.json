@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build:widget": "cd widget && npm ci && npm run build && cp dist/parsed-widget.js ../public/widget.js",
     "build": "npm run build:widget && next build",
-    "start": "next start",
+    "start": "concurrently \"next start\" \"npm run inngest\"",
     "lint": "eslint",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
@@ -14,7 +14,7 @@
     "db:studio": "drizzle-kit studio",
     "auth:generate": "npx @better-auth/cli generate --output src/db/auth-schema.ts --config src/lib/auth.ts",
     "ts:check": "tsc --noEmit",
-    "inngest": "npx inngest-cli@latest dev",
+    "inngest": "inngest-cli dev -u http://localhost:3000/api/inngest",
     "dev:all": "concurrently \"npm run dev\" \"npm run inngest\""
   },
   "dependencies": {
@@ -82,6 +82,7 @@
     "@types/react-dom": "^19.2.3",
     "@types/turndown": "^5.0.6",
     "concurrently": "^9.2.1",
+    "inngest-cli": "latest",
     "drizzle-kit": "^0.31.9",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
