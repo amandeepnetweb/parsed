@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev:all": "next dev",
+    "dev": "next dev",
     "build:widget": "cd widget && npm ci && npm run build && cp dist/parsed-widget.js ../public/widget.js",
     "build": "npm run build:widget && next build",
     "start": "next start",
@@ -15,7 +15,7 @@
     "auth:generate": "npx @better-auth/cli generate --output src/db/auth-schema.ts --config src/lib/auth.ts",
     "ts:check": "tsc --noEmit",
     "inngest": "npx inngest-cli@latest dev",
-    "dev": "concurrently \"npm run dev\" \"npm run inngest\""
+    "dev:all": "concurrently \"npm run dev\" \"npm run inngest\""
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.58",
