@@ -6,6 +6,7 @@ import { Virtuoso } from "react-virtuoso";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, isTextUIPart, isDataUIPart } from "ai";
 import type { UIMessage } from "ai";
+import { generateId } from "@/lib/utils";
 import { ChatMessage } from "@/components/chat/ChatMessage";
 import { ChatInput } from "@/components/chat/ChatInput";
 import type { Source } from "@/types/chat.types";
@@ -87,7 +88,7 @@ interface Props {
 
 export function ChatPanel({ fileIds, placeholder, chatId: chatIdProp, initialMessages, hideSources, initialHasMore, initialCursor }: Props) {
   const [input, setInput] = useState("");
-  const [chatId] = useState(() => chatIdProp ?? crypto.randomUUID());
+  const [chatId] = useState(() => chatIdProp ?? generateId());
 
   const fileIdsRef = useRef(fileIds);
   fileIdsRef.current = fileIds;

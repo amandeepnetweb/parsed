@@ -11,6 +11,7 @@ import type { UIMessage } from "ai";
 import type { Source } from "@/types/chat.types";
 import type { Folder } from "@/db/schema";
 import type { FileWithFolder } from "@/types/file.types";
+import { generateId } from "@/lib/utils";
 
 const LOADING_PHRASES = [
   "Loading your conversation...",
@@ -92,7 +93,7 @@ function ChatPageContent() {
     if (folderId) return folderId;
     const stored = localStorage.getItem("all-files-chat-id");
     if (stored) return stored;
-    const newId = crypto.randomUUID();
+    const newId = generateId();
     localStorage.setItem("all-files-chat-id", newId);
     return newId;
   });

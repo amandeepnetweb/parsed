@@ -4,6 +4,7 @@ import { useCallback, useRef, useState } from "react";
 import { Upload, X, FileText } from "lucide-react";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
+import { generateId } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -71,7 +72,7 @@ export function FileUploader({ defaultFolderId }: FileUploaderProps) {
         toast.error(`${file.name} exceeds 50 MB limit`);
         continue;
       }
-      valid.push({ file, id: crypto.randomUUID(), status: "pending" });
+      valid.push({ file, id: generateId(), status: "pending" });
     }
     if (valid.length) {
       setQueue((q) => [...q, ...valid]);
