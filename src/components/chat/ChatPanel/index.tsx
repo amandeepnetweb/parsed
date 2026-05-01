@@ -9,6 +9,7 @@ import type { UIMessage } from "ai";
 import { generateId } from "@/lib/utils";
 import { ChatMessage } from "@/components/chat/ChatMessage";
 import { ChatInput } from "@/components/chat/ChatInput";
+import { SourceCard } from "@/components/chat/SourceCard";
 import type { Source } from "@/types/chat.types";
 
 const THINKING_PHRASES = [
@@ -20,33 +21,42 @@ const THINKING_PHRASES = [
 ];
 
 function ThinkingTypewriter() {
-  const [phraseIndex, setPhraseIndex] = useState(0);
   const [displayed, setDisplayed] = useState("");
-  const [typing, setTyping] = useState(true);
+  const phraseIndexRef = useRef(0);
+  const typingRef = useRef(true);
+  const displayedRef = useRef("");
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const tick = useCallback(() => {
-    const phrase = THINKING_PHRASES[phraseIndex];
-    if (typing) {
-      if (displayed.length < phrase.length) {
-        timeoutRef.current = setTimeout(() => setDisplayed(phrase.slice(0, displayed.length + 1)), 38);
-      } else {
-        timeoutRef.current = setTimeout(() => setTyping(false), 1000);
-      }
-    } else {
-      if (displayed.length > 0) {
-        timeoutRef.current = setTimeout(() => setDisplayed((p) => p.slice(0, -1)), 18);
-      } else {
-        setPhraseIndex((i) => (i + 1) % THINKING_PHRASES.length);
-        setTyping(true);
-      }
-    }
-  }, [displayed, typing, phraseIndex]);
-
   useEffect(() => {
-    tick();
+    const tick = () => {
+      const phrase = THINKING_PHRASES[phraseIndexRef.current];
+      if (typingRef.current) {
+        if (displayedRef.current.length < phrase.length) {
+          const next = phrase.slice(0, displayedRef.current.length + 1);
+          displayedRef.current = next;
+          setDisplayed(next);
+          timeoutRef.current = setTimeout(tick, 38);
+        } else {
+          typingRef.current = false;
+          timeoutRef.current = setTimeout(tick, 1000);
+        }
+      } else {
+        if (displayedRef.current.length > 0) {
+          const next = displayedRef.current.slice(0, -1);
+          displayedRef.current = next;
+          setDisplayed(next);
+          timeoutRef.current = setTimeout(tick, 18);
+        } else {
+          phraseIndexRef.current = (phraseIndexRef.current + 1) % THINKING_PHRASES.length;
+          typingRef.current = true;
+          timeoutRef.current = setTimeout(tick, 38);
+        }
+      }
+    };
+
+    timeoutRef.current = setTimeout(tick, 38);
     return () => { if (timeoutRef.current) clearTimeout(timeoutRef.current); };
-  }, [tick]);
+  }, []);
 
   return (
     <div className="flex justify-start px-1 py-1">
@@ -216,19 +226,18 @@ export function ChatPanel({ fileIds, placeholder, chatId: chatIdProp, initialMes
                 <div className="space-y-1 px-4 py-2 max-w-4xl mx-auto w-full min-w-0 overflow-hidden">
                   <ChatMessage role={message.role as "user" | "assistant"} content={text} />
                   {!hideSources && sources.length > 0 && (
-                    <p className="text-xs text-muted-foreground pl-1 pt-0.5">
-                      Sources:{" "}
-                      {Array.from(new Map(sources.map((s) => [s.fileId, s.fileName])).entries()).map(
-                        ([fileId, fileName], i, arr) => (
-                          <span key={fileId}>
-                            <Link href={`/files/${fileId}`} className="underline hover:text-foreground transition-colors">
-                              {fileName}
-                            </Link>
-                            {i < arr.length - 1 ? ", " : ""}
-                          </span>
-                        ),
-                      )}
-                    </p>
+                    <div className="flex gap-2 overflow-x-auto pb-1 pt-0.5 scrollbar-none">
+                      {sources.map((source) => (
+                        <Link
+                          key={source.fileId}
+                          href={source.pageUrl ?? `/files/${source.fileId}`}
+                          target={source.pageUrl ? "_blank" : undefined}
+                          rel={source.pageUrl ? "noopener noreferrer" : undefined}
+                        >
+                          <SourceCard source={source} />
+                        </Link>
+                      ))}
+                    </div>
                   )}
                 </div>
               );

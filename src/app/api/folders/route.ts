@@ -1,4 +1,4 @@
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/database";
@@ -39,7 +39,7 @@ export async function POST(req: Request) {
       const parent = await db
         .select({ id: folders.id })
         .from(folders)
-        .where(eq(folders.id, parentId))
+        .where(and(eq(folders.id, parentId), eq(folders.userId, session.user.id)))
         .limit(1);
 
       if (!parent.length || parent[0].id !== parentId) {

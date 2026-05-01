@@ -136,7 +136,6 @@ export const processFile = inngest.createFunction(
           chunkIndex: i,
           tags: file.tags,
           size: file.size,
-          preview: chunk.slice(0, 200),
           content: chunk,
         } satisfies ChunkMetadata,
       }));

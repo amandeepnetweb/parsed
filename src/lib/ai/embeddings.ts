@@ -1,6 +1,7 @@
-import OpenAI from "openai";
-import { embedMany } from "ai";
+import { embed, embedMany } from "ai";
+import { openai, createOpenAI } from "@ai-sdk/openai";
 import { google } from "@ai-sdk/google";
+import type { EmbeddingModel } from "ai";
 import {
   EMBEDDING_CONFIG,
   DEFAULT_EMBEDDING_MODELS,
@@ -9,43 +10,41 @@ import {
 
 const BATCH_SIZE = 100;
 
-export async function embedTexts(texts: string[]): Promise<number[][]> {
+function getEmbeddingModel(): EmbeddingModel<string> {
   const { provider, model } = EMBEDDING_CONFIG;
   const resolvedModel = model ?? DEFAULT_EMBEDDING_MODELS[provider];
 
-  if (provider === "google") {
-    const embeddings: number[][] = [];
-    for (let i = 0; i < texts.length; i += BATCH_SIZE) {
-      const batch = texts.slice(i, i + BATCH_SIZE);
-      const { embeddings: batchEmbeddings } = await embedMany({
-        model: google.embedding(resolvedModel),
-        values: batch,
-        providerOptions: { google: { outputDimensionality: 768 } },
-      });
-      embeddings.push(...batchEmbeddings);
-    }
-    return embeddings;
+  switch (provider) {
+    case "openai":
+      return openai.embedding(resolvedModel);
+    case "google":
+      return google.embedding(resolvedModel);
+    case "ollama":
+      return createOpenAI({
+        baseURL: `${OLLAMA_BASE_URL}/v1`,
+        apiKey: "ollama",
+      }).embedding(resolvedModel);
+    default:
+      throw new Error(`Unsupported embedding provider: "${provider}"`);
   }
+}
 
-  // openai + ollama — both speak the OpenAI embeddings API
-  const client =
-    provider === "ollama"
-      ? new OpenAI({ baseURL: `${OLLAMA_BASE_URL}/v1`, apiKey: "ollama" })
-      : new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+export async function embedTexts(texts: string[]): Promise<number[][]> {
+  const model = getEmbeddingModel();
+  const all: number[][] = [];
 
-  const embeddings: number[][] = [];
   for (let i = 0; i < texts.length; i += BATCH_SIZE) {
-    const batch = texts.slice(i, i + BATCH_SIZE);
-    const response = await client.embeddings.create({
-      model: resolvedModel,
-      input: batch,
+    const { embeddings } = await embedMany({
+      model,
+      values: texts.slice(i, i + BATCH_SIZE),
     });
-    embeddings.push(...response.data.map((d) => d.embedding));
+    all.push(...embeddings);
   }
-  return embeddings;
+
+  return all;
 }
 
 export async function embedText(text: string): Promise<number[]> {
-  const [embedding] = await embedTexts([text]);
+  const { embedding } = await embed({ model: getEmbeddingModel(), value: text });
   return embedding;
 }

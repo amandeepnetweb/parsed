@@ -18,7 +18,7 @@ export const DEFAULT_LLM_MODELS: Record<LLMProvider, string> = {
   anthropic: "claude-sonnet-4-6",
   openai: "gpt-4o-mini",
   google: "gemini-2.0-flash",
-  ollama: "tinyllama",
+  ollama: "llama3.1:8b",
 };
 
 export const DEFAULT_EMBEDDING_MODELS: Record<EmbeddingProvider, string> = {

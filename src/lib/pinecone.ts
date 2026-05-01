@@ -17,7 +17,6 @@ export interface ChunkMetadata {
   chunkIndex: number;
   tags: string[];
   size: number;
-  preview: string;
   content: string;
   [key: string]: string | number | boolean | string[];
 }
@@ -27,8 +26,8 @@ export async function upsertChunks(
   chunks: Array<{ id: string; values: number[]; metadata: ChunkMetadata }>,
 ): Promise<void> {
   const index = getPineconeIndex(userId);
-  // Upsert in batches of 100
-  const BATCH = 100;
+  // Upsert in batches of 200 (Pinecone's recommended max)
+  const BATCH = 200;
   for (let i = 0; i < chunks.length; i += BATCH) {
     await index.upsert({ records: chunks.slice(i, i + BATCH) });
   }

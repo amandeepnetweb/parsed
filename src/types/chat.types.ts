@@ -7,6 +7,7 @@ export interface Source {
   preview: string;
   chunkIndex: number;
   score: number;
+  pageUrl?: string; // set for web-crawl chunks — points to the specific page
 }
 
 export interface ChatScope {

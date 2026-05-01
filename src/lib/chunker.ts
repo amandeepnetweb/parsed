@@ -9,15 +9,15 @@ export async function chunkText(
 ): Promise<string[]> {
   if (fileType === "md") {
     const splitter = new MarkdownTextSplitter({
-      chunkSize: 1000,
-      chunkOverlap: 150,
+      chunkSize: 1500,
+      chunkOverlap: 200,
     });
     return splitter.splitText(text);
   }
 
   const splitter = new RecursiveCharacterTextSplitter({
-    chunkSize: 1000,
-    chunkOverlap: 150,
+    chunkSize: 1500,
+    chunkOverlap: 200,
   });
   return splitter.splitText(text);
 }

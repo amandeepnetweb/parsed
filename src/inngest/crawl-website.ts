@@ -3,8 +3,8 @@ import { inngest } from "@/lib/inngest";
 import { pusher } from "@/lib/pusher";
 import { db } from "@/lib/database";
 import { files, fileChunks, folders, webCrawlJobs } from "@/db/schema";
-import { discoverUrls } from "@/lib/crawler";
-import { extractPageData, compileSiteMarkdown } from "@/lib/extractor";
+import { crawlAndExtract } from "@/lib/crawler";
+import type { PageData } from "@/lib/extractor";
 import { uploadToBlob } from "@/lib/storage";
 import { chunkText } from "@/lib/chunker";
 import { embedTexts } from "@/lib/embeddings";
@@ -24,6 +24,45 @@ export type CrawlProgressData = {
 
 const emit = (jobId: string, data: CrawlProgressData) =>
   pusher.trigger(`crawl-${jobId}`, "progress", data);
+
+// Builds a lightweight site summary for Blob storage.
+// Contact info + page index only — full content lives in per-page Pinecone chunks.
+function buildSiteSummary(rootUrl: string, pages: PageData[]): string {
+  const domain = new URL(rootUrl).hostname;
+
+  const allEmails = [...new Set(pages.flatMap((p) => p.emails))];
+  const allPhones = [...new Set(pages.flatMap((p) => p.phones))];
+  const allSocials: Record<string, string> = {};
+  for (const page of pages) {
+    for (const [name, url] of Object.entries(page.socials)) {
+      if (!allSocials[name]) allSocials[name] = url;
+    }
+  }
+
+  const lines: string[] = [
+    `# ${pages[0]?.title || domain}`,
+    ``,
+    `URL: ${rootUrl}`,
+    `Crawled: ${new Date().toISOString()}`,
+    `Pages: ${pages.length}`,
+    ``,
+  ];
+
+  if (allEmails.length > 0 || allPhones.length > 0 || Object.keys(allSocials).length > 0) {
+    lines.push(`## Contact`);
+    if (allEmails.length > 0) lines.push(`Emails: ${allEmails.join(", ")}`);
+    if (allPhones.length > 0) lines.push(`Phones: ${allPhones.join(", ")}`);
+    for (const [name, url] of Object.entries(allSocials)) lines.push(`${name}: ${url}`);
+    lines.push(``);
+  }
+
+  lines.push(`## Pages`);
+  for (const page of pages) {
+    lines.push(`- [${page.title}](${page.url})`);
+  }
+
+  return lines.join("\n");
+}
 
 export const crawlWebsite = inngest.createFunction(
   {
@@ -51,82 +90,45 @@ export const crawlWebsite = inngest.createFunction(
       maxPages?: number;
     };
 
-    await emit(jobId, { step: "discover", message: "Discovering pages…" });
+    await db.update(webCrawlJobs).set({ status: "crawling" }).where(eq(webCrawlJobs.id, jobId));
+    await emit(jobId, { step: "discover", message: "Crawling pages…" });
 
-    // ── Step 1: Discover all URLs via BFS ─────────────────────────────────────
-    const urls = await step.run("discover-urls", async () => {
-      await db.update(webCrawlJobs).set({ status: "crawling" }).where(eq(webCrawlJobs.id, jobId));
-      return discoverUrls(rootUrl, maxPages);
-    });
-
-    const total = urls.length;
-    await emit(jobId, {
-      step: "discovered",
-      message: `Found ${total} page${total === 1 ? "" : "s"} — extracting content…`,
-      totalPages: total,
-      processedPages: 0,
-    });
-
-    await step.run("update-total", async () => {
-      await db
-        .update(webCrawlJobs)
-        .set({ status: "processing", totalPages: total })
-        .where(eq(webCrawlJobs.id, jobId));
-    });
-
-    // ── Step 2: Fetch + extract all pages ─────────────────────────────────────
-    // Process in batches of 5 concurrently, emit progress after each batch
-    const BATCH = 5;
-    const allPageData = await step.run("extract-pages", async () => {
-      const results = [];
-
-      for (let i = 0; i < urls.length; i += BATCH) {
-        const batch = urls.slice(i, i + BATCH);
-
-        const batchResults = await Promise.allSettled(
-          batch.map(async (pageUrl) => {
-            const res = await fetch(pageUrl, {
-              headers: { "User-Agent": "Parsed-Crawler/1.0" },
-              signal: AbortSignal.timeout(12000),
-            });
-            if (!res.ok) throw new Error(`HTTP ${res.status}`);
-            const html = await res.text();
-            return extractPageData(html, pageUrl);
-          }),
-        );
-
-        for (const r of batchResults) {
-          if (r.status === "fulfilled") results.push(r.value);
-        }
-
-        const processed = Math.min(i + BATCH, urls.length);
-        await pusher.trigger(`crawl-${jobId}`, "progress", {
+    // ── Step 1: Crawl + extract (one fetch per page) ──────────────────────────
+    const allPageData = await step.run("crawl-pages", async () => {
+      return crawlAndExtract(rootUrl, maxPages, async (processed, estimated) => {
+        await emit(jobId, {
           step: "extracting",
-          message: `Extracted ${processed} of ${urls.length} pages…`,
+          message: `Crawled ${processed} of ~${estimated} pages…`,
           processedPages: processed,
-          totalPages: urls.length,
-        } satisfies CrawlProgressData);
-      }
-
-      return results;
+          totalPages: estimated,
+        });
+      });
     });
 
-    await emit(jobId, { step: "compile", message: "Compiling site document…" });
+    const total = allPageData.length;
 
-    // ── Step 3: Compile all pages into one document — no truncation, full content
-    const markdown = await step.run("compile-markdown", async () => {
-      return compileSiteMarkdown(rootUrl, allPageData);
+    await db
+      .update(webCrawlJobs)
+      .set({ status: "processing", totalPages: total })
+      .where(eq(webCrawlJobs.id, jobId));
+
+    await emit(jobId, {
+      step: "store",
+      message: `Found ${total} page${total === 1 ? "" : "s"} — saving…`,
+      totalPages: total,
+      processedPages: total,
     });
 
-    await emit(jobId, { step: "store", message: "Saving document…" });
-
-    // ── Step 4: Upload to Vercel Blob + create folder + file record ──────────
+    // ── Step 2: Upload site summary + create DB records ───────────────────────
+    // Full page content goes into per-page Pinecone chunks (step 3).
+    // Blob stores only a lightweight index: contact info + page list.
     const { fileId, folderId } = await step.run("store-file", async () => {
       const domain = new URL(rootUrl).hostname;
-      const encoder = new TextEncoder();
-      const buffer = encoder.encode(markdown).buffer as ArrayBuffer;
       const safeDomain = domain.replace(/[^a-z0-9]/gi, "-");
+      const summary = buildSiteSummary(rootUrl, allPageData);
 
+      const encoder = new TextEncoder();
+      const buffer = encoder.encode(summary).buffer as ArrayBuffer;
       const blobUrl = await uploadToBlob(`web/${safeDomain}.md`, buffer, "text/markdown");
 
       const [folder] = await db
@@ -142,7 +144,7 @@ export const crawlWebsite = inngest.createFunction(
           name: `web-scraping-${safeDomain}`,
           originalName: `web-scraping-${safeDomain}.md`,
           type: "web",
-          size: encoder.encode(markdown).length,
+          size: encoder.encode(summary).length,
           blobUrl,
           status: "processing",
           tags: [],
@@ -159,56 +161,98 @@ export const crawlWebsite = inngest.createFunction(
 
     await emit(jobId, { step: "embed", message: "Embedding content…" });
 
-    // ── Step 5: Chunk → Embed → Upsert ───────────────────────────────────────
+    // ── Step 3: Per-page chunk → embed → upsert ───────────────────────────────
+    // Each page is chunked independently so chunks are semantically coherent
+    // and source attribution points to the specific page, not just the domain.
     await step.run("embed-and-store", async () => {
-      const chunks = await chunkText(markdown, "md");
-      if (chunks.length === 0) throw new Error("No content to embed");
+      const domain = new URL(rootUrl).hostname;
 
-      const embeddings = await embedTexts(chunks);
+      // Chunk all pages in parallel (CPU-bound, no I/O)
+      const pageChunkResults = await Promise.all(
+        allPageData
+          .filter((p) => p.bodyText.trim())
+          .map(async (page) => ({
+            page,
+            chunks: await chunkText(page.bodyText, "md"),
+          })),
+      );
 
-      const vectors = chunks.map((chunk, i) => ({
+      // Flatten into one array with per-page metadata attached
+      const allChunks = pageChunkResults.flatMap(({ page, chunks }) =>
+        chunks.map((content) => ({
+          content,
+          pageUrl: page.url,
+          pageTitle: page.title || domain,
+        })),
+      );
+
+      // Prepend a dedicated contact-info chunk so emails/phones/socials are
+      // retrievable even though they don't appear in Readability body text.
+      const allEmails = [...new Set(allPageData.flatMap((p) => p.emails))];
+      const allPhones = [...new Set(allPageData.flatMap((p) => p.phones))];
+      const allSocials: Record<string, string> = {};
+      for (const page of allPageData) {
+        for (const [name, url] of Object.entries(page.socials)) {
+          if (!allSocials[name]) allSocials[name] = url;
+        }
+      }
+      if (allEmails.length > 0 || allPhones.length > 0 || Object.keys(allSocials).length > 0) {
+        const lines = [`Contact information for ${domain}:`];
+        if (allEmails.length > 0) lines.push(`Emails: ${allEmails.join(", ")}`);
+        if (allPhones.length > 0) lines.push(`Phones: ${allPhones.join(", ")}`);
+        for (const [name, url] of Object.entries(allSocials)) lines.push(`${name}: ${url}`);
+        allChunks.unshift({ content: lines.join("\n"), pageUrl: rootUrl, pageTitle: domain });
+      }
+
+      if (allChunks.length === 0) throw new Error("No content to embed");
+
+      // Single batch embedding call across all chunks from all pages
+      const embeddings = await embedTexts(allChunks.map((c) => c.content));
+
+      const vectors = allChunks.map((chunk, i) => ({
         id: `${fileId}-chunk-${i}`,
         values: embeddings[i],
         metadata: {
           fileId,
-          fileName: new URL(rootUrl).hostname,
+          fileName: chunk.pageTitle,  // specific page title, not just domain
           fileType: "web",
           folderId,
-          folderPath: new URL(rootUrl).hostname,
+          folderPath: domain,
           chunkIndex: i,
           tags: [],
-          size: new TextEncoder().encode(markdown).length,
-          preview: chunk.slice(0, 200),
-          content: chunk,
+          size: new TextEncoder().encode(chunk.content).length,
+          content: chunk.content,
+          pageUrl: chunk.pageUrl,     // specific page URL for source attribution
         } satisfies ChunkMetadata,
       }));
 
       await upsertChunks(userId, vectors);
 
-      const dbRows = chunks.map((chunk, i) => ({
+      const dbRows = allChunks.map((chunk, i) => ({
         fileId,
-        content: chunk,
+        content: chunk.content,
         chunkIndex: i,
         pineconeId: `${fileId}-chunk-${i}`,
       }));
+
       await db.insert(fileChunks).values(dbRows);
       await db.update(files).set({ status: "ready" }).where(eq(files.id, fileId));
       await db
         .update(webCrawlJobs)
-        .set({ status: "done", processedPages: allPageData.length })
+        .set({ status: "done", processedPages: total })
         .where(eq(webCrawlJobs.id, jobId));
     });
 
     await emit(jobId, {
       step: "done",
-      message: `${allPageData.length} pages imported — ready to chat!`,
-      processedPages: allPageData.length,
+      message: `${total} pages imported — ready to chat!`,
+      processedPages: total,
       totalPages: total,
       fileId,
       folderId,
       done: true,
     });
 
-    return { jobId, fileId, pages: allPageData.length };
+    return { jobId, fileId, pages: total };
   },
 );
