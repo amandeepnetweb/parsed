@@ -10,7 +10,7 @@ import {
 
 const BATCH_SIZE = 100;
 
-function getEmbeddingModel(): EmbeddingModel<string> {
+function getEmbeddingModel(): EmbeddingModel {
   const { provider, model } = EMBEDDING_CONFIG;
   const resolvedModel = model ?? DEFAULT_EMBEDDING_MODELS[provider];
 
